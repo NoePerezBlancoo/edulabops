@@ -12,4 +12,4 @@ for f in $FILES; do
   fi
 done
 
-[ $BAD -eq 0 ] || (echo "ERROR: Remove BOM (UTF-8 BOM) from files above."; exit 1)
+[ $BAD -eq 0 ] || (echo "ERROR: Remove BOM (UTF-8 BOM) from files above."; echo "TIP: run: powershell -ExecutionPolicy Bypass -File .\scripts\fix-bom.ps1"; exit 1)
