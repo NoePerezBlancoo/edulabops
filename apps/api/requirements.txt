@@ -1,0 +1,16 @@
+﻿fastapi==0.112.2
+uvicorn[standard]==0.30.6
+SQLAlchemy==2.0.34
+psycopg[binary]==3.2.2
+python-jose==3.3.0
+argon2-cffi==23.1.0
+pydantic==2.8.2
+pydantic-settings==2.4.0
+email-validator==2.2.0
+celery==5.4.0
+redis==5.0.8
+prometheus-fastapi-instrumentator==7.0.0
+
+
+prometheus-fastapi-instrumentator==7.0.0
+

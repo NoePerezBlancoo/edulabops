@@ -1,0 +1,193 @@
+﻿<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>EduLabOps</title>
+  <style>
+    body{font-family:system-ui,Segoe UI,Arial; margin:0; background:#0b1020; color:#e7e9ee}
+    header{padding:18px 22px; background:#0f1730; border-bottom:1px solid #1e2a55}
+    main{max-width:1100px; margin:0 auto; padding:22px}
+    .grid{display:grid; grid-template-columns:1fr 1fr; gap:16px}
+    .card{background:#0f1730; border:1px solid #1e2a55; border-radius:14px; padding:16px}
+    input,select,button,textarea{width:100%; box-sizing:border-box; padding:10px 12px; border-radius:10px; border:1px solid #2a3a77; background:#0b1020; color:#e7e9ee}
+    button{cursor:pointer; font-weight:600}
+    .row{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+    pre{white-space:pre-wrap; word-break:break-word; background:#0b1020; border:1px solid #2a3a77; padding:12px; border-radius:12px}
+    .small{opacity:.8; font-size:12px}
+  </style>
+</head>
+<body>
+<header>
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
+    <div>
+      <div style="font-size:18px;font-weight:800;">EduLabOps</div>
+      <div class="small">Plataforma demo: profesor crea curso/entrega, alumno entrega repo, worker corrige con Docker</div>
+    </div>
+    <div class="small">API: <span id="apiBaseLabel"></span></div>
+  </div>
+</header>
+
+<main>
+  <div class="card">
+    <div class="row">
+      <div>
+        <label class="small">API Base</label>
+        <input id="apiBase" value="http://localhost:8000" />
+      </div>
+      <div style="display:flex;align-items:end;gap:10px;">
+        <button id="btnHealth">Health</button>
+        <button id="btnOpenApi">OpenAPI</button>
+      </div>
+    </div>
+    <pre id="outTop"></pre>
+  </div>
+
+  <div class="grid" style="margin-top:16px;">
+    <div class="card">
+      <div style="font-weight:800;margin-bottom:10px;">Profesor</div>
+      <div class="row">
+        <div><label class="small">Email</label><input id="tEmail" value="teacher@demo.com"/></div>
+        <div><label class="small">Password</label><input id="tPass" type="password" value="123456"/></div>
+      </div>
+      <div class="row" style="margin-top:10px;">
+        <button id="btnTeacherRegister">Register</button>
+        <button id="btnTeacherLogin">Login</button>
+      </div>
+      <div style="margin-top:10px;">
+        <label class="small">Token</label>
+        <textarea id="tToken" rows="3"></textarea>
+      </div>
+
+      <div style="margin-top:12px;">
+        <label class="small">Curso</label>
+        <input id="courseName" value="DAW DevOps"/>
+        <button id="btnCreateCourse" style="margin-top:10px;">Crear curso</button>
+        <div class="small">course_id: <span id="courseId"></span></div>
+      </div>
+
+      <div style="margin-top:12px;">
+        <label class="small">Entrega</label>
+        <input id="assTitle" value="Entrega 1"/>
+        <input id="assDesc" value="MVP"/>
+        <input id="assImage" value="python:3.12-slim"/>
+        <button id="btnCreateAssignment" style="margin-top:10px;">Crear entrega</button>
+        <div class="small">assignment_id: <span id="assId"></span></div>
+      </div>
+
+      <pre id="outTeacher"></pre>
+    </div>
+
+    <div class="card">
+      <div style="font-weight:800;margin-bottom:10px;">Alumno</div>
+      <div class="row">
+        <div><label class="small">Email</label><input id="sEmail" value="student@demo.com"/></div>
+        <div><label class="small">Password</label><input id="sPass" type="password" value="123456"/></div>
+      </div>
+      <div class="row" style="margin-top:10px;">
+        <button id="btnStudentRegister">Register</button>
+        <button id="btnStudentLogin">Login</button>
+      </div>
+      <div style="margin-top:10px;">
+        <label class="small">Token</label>
+        <textarea id="sToken" rows="3"></textarea>
+      </div>
+
+      <div style="margin-top:12px;">
+        <label class="small">Repo URL (público)</label>
+        <input id="repoUrl" value="https://example.com/repo.git"/>
+        <button id="btnSubmit" style="margin-top:10px;">Enviar entrega</button>
+        <div class="small">submission_id: <span id="subId"></span></div>
+      </div>
+
+      <div style="margin-top:12px;">
+        <button id="btnCheck">Consultar resultado</button>
+      </div>
+
+      <pre id="outStudent"></pre>
+    </div>
+  </div>
+</main>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+  const apiBase = () => $("apiBase").value.trim().replace(/\/$/,"");
+  const setTop = (x) => $("outTop").textContent = typeof x === "string" ? x : JSON.stringify(x,null,2);
+  const setTeacher = (x) => $("outTeacher").textContent = typeof x === "string" ? x : JSON.stringify(x,null,2);
+  const setStudent = (x) => $("outStudent").textContent = typeof x === "string" ? x : JSON.stringify(x,null,2);
+
+  function label() { $("apiBaseLabel").textContent = apiBase(); }
+  $("apiBase").addEventListener("input", label); label();
+
+  async function req(method, path, token, body){
+    const res = await fetch(apiBase()+path, {
+      method,
+      headers: Object.assign(
+        {"Content-Type":"application/json"},
+        token ? {"Authorization":"Bearer "+token} : {}
+      ),
+      body: body ? JSON.stringify(body) : undefined
+    });
+    const txt = await res.text();
+    let json = null;
+    try { json = txt ? JSON.parse(txt) : null; } catch { json = txt; }
+    return { ok: res.ok, status: res.status, data: json };
+  }
+
+  $("btnHealth").onclick = async () => setTop(await req("GET","/health",null,null));
+  $("btnOpenApi").onclick = async () => setTop(await req("GET","/openapi.json",null,null));
+
+  $("btnTeacherRegister").onclick = async () => {
+    const r = await req("POST","/auth/register",null,{email:$("tEmail").value,password:$("tPass").value,role:"teacher"});
+    if(r.ok) $("tToken").value = r.data.access_token || "";
+    setTeacher(r);
+  };
+  $("btnTeacherLogin").onclick = async () => {
+    const r = await req("POST","/auth/login",null,{email:$("tEmail").value,password:$("tPass").value});
+    if(r.ok) $("tToken").value = r.data.access_token || "";
+    setTeacher(r);
+  };
+
+  $("btnCreateCourse").onclick = async () => {
+    const tok = $("tToken").value.trim();
+    const r = await req("POST","/courses",tok,{name:$("courseName").value});
+    if(r.ok) $("courseId").textContent = r.data.id;
+    setTeacher(r);
+  };
+
+  $("btnCreateAssignment").onclick = async () => {
+    const tok = $("tToken").value.trim();
+    const courseId = parseInt($("courseId").textContent || "0", 10);
+    const r = await req("POST","/assignments",tok,{course_id:courseId,title:$("assTitle").value,description:$("assDesc").value,grader_image:$("assImage").value});
+    if(r.ok) $("assId").textContent = r.data.id;
+    setTeacher(r);
+  };
+
+  $("btnStudentRegister").onclick = async () => {
+    const r = await req("POST","/auth/register",null,{email:$("sEmail").value,password:$("sPass").value,role:"student"});
+    if(r.ok) $("sToken").value = r.data.access_token || "";
+    setStudent(r);
+  };
+  $("btnStudentLogin").onclick = async () => {
+    const r = await req("POST","/auth/login",null,{email:$("sEmail").value,password:$("sPass").value});
+    if(r.ok) $("sToken").value = r.data.access_token || "";
+    setStudent(r);
+  };
+
+  $("btnSubmit").onclick = async () => {
+    const tok = $("sToken").value.trim();
+    const assId = parseInt($("assId").textContent || "0", 10);
+    const r = await req("POST","/submissions",tok,{assignment_id:assId,repo_url:$("repoUrl").value});
+    if(r.ok) $("subId").textContent = r.data.id;
+    setStudent(r);
+  };
+
+  $("btnCheck").onclick = async () => {
+    const tok = $("sToken").value.trim();
+    const id = parseInt($("subId").textContent || "0", 10);
+    const r = await req("GET",`/submissions/${id}`,tok,null);
+    setStudent(r);
+  };
+</script>
+</body>
+</html>
