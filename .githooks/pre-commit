@@ -1,0 +1,15 @@
+#!/usr/bin/env sh
+set -e
+
+FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(conf|yml|yaml|env|ini|cfg|txt)$' >/dev/null 2>&1 && git diff --cached --name-only --diff-filter=ACM | grep -E '\.(conf|yml|yaml|env|ini|cfg|txt)$' || true)
+[ -z "$FILES" ] && exit 0
+
+BAD=0
+for f in $FILES; do
+  if [ -f "$f" ] && head -c 3 "$f" | od -An -tx1 | tr -d ' \n' | grep -qi '^efbbbf'; then
+    echo "BOM detected: $f"
+    BAD=1
+  fi
+done
+
+[ $BAD -eq 0 ] || (echo "ERROR: Remove BOM (UTF-8 BOM) from files above."; exit 1)
